@@ -60,7 +60,6 @@ export default function DashboardScreen() {
 
     // Di sini kamu bisa memanggil API lain yang membutuhkan x-business-id
     // Contoh: fetchSummaryData(id);
-    console.log("Business ID set to header:", id);
   };
 
   if (loading) {
@@ -85,8 +84,8 @@ export default function DashboardScreen() {
           onSelect={(option) => handleSwitchBusiness(option.id)}
         />
         <Card style={styles.summaryCard}>
-          <Typography variant="h2">Total Saldo</Typography>
-          <Typography variant="h1" style={{ marginTop: 10 }}>
+          <Typography variant="body">Total Saldo</Typography>
+          <Typography variant="h1" style={{ marginTop: 2 }}>
             Rp 0
           </Typography>
         </Card>

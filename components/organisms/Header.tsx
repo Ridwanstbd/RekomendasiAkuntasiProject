@@ -12,7 +12,7 @@ export const Header: React.FC<HeaderProps> = ({ name }) => {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
+    <View style={[{ paddingTop: insets.top + 10 }]}>
       <View style={styles.content}>
         <View>
           <Typography variant="body" color="#8E8E93">
@@ -31,15 +31,11 @@ export const Header: React.FC<HeaderProps> = ({ name }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#FFF",
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-  },
   content: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 10,
   },
   name: {
     fontSize: 20,

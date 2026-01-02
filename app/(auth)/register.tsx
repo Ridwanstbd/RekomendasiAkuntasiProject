@@ -43,27 +43,7 @@ export default function RegisterScreen() {
         },
       });
 
-      const loginResponse = await api.post("/api/auth/login", {
-        email,
-        password,
-      });
-
-      if (loginResponse.data.token) {
-        await SecureStore.setItemAsync("userToken", loginResponse.data.token);
-
-        Alert.alert(
-          "Registrasi Berhasil",
-          "Akun Anda telah dibuat dan Anda otomatis masuk.",
-          [
-            {
-              text: "Lanjutkan",
-              onPress: () => router.replace("/(tabs)/dashboard"),
-            },
-          ]
-        );
-      } else {
-        router.replace("/(auth)/login");
-      }
+      router.replace("/(auth)/login");
     } catch (err: any) {
       const message = err.response?.data?.message || "Gagal mendaftarkan akun";
       setError(message);

@@ -36,6 +36,8 @@ export const MainLayoutTemplate: React.FC<MainLayoutTemplateProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    backgroundColor: "#FFF",
+    paddingHorizontal: 20,
+    paddingBottom: 15,
   },
 });

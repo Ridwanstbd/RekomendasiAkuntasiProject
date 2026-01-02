@@ -33,8 +33,6 @@ export default function CompanySetupScreen() {
       const bizResponse = await api.post("/api/business", {
         name,
         description,
-        code:
-          name.substring(0, 3).toUpperCase() + Math.floor(Math.random() * 100),
       });
 
       const businessId = bizResponse.data.data.id;
@@ -62,9 +60,13 @@ export default function CompanySetupScreen() {
         }
       }, 1000);
     } catch (err: any) {
-      console.error(err);
+      console.error("DEBUG ERROR 400:", err.response?.data);
+
+      const serverMessage =
+        err.response?.data?.message || "Terjadi kesalahan validasi data.";
+      Alert.alert("Kesalahan Input", serverMessage);
+
       setCurrentStep(1);
-      alert("Terjadi kesalahan saat konfigurasi.");
     } finally {
       setLoading(false);
     }
