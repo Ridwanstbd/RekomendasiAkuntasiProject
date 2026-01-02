@@ -1,6 +1,5 @@
 import React from "react";
 import { View, StyleSheet, Image } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Typography } from "../atoms/Typography";
 import { Bell } from "lucide-react-native";
 
@@ -9,22 +8,18 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ name }) => {
-  const insets = useSafeAreaInsets();
-
   return (
-    <View style={[{ paddingTop: insets.top + 10 }]}>
-      <View style={styles.content}>
-        <View>
-          <Typography variant="body" color="#8E8E93">
-            Selamat Datang,
-          </Typography>
-          <Typography variant="h2" style={styles.name}>
-            {name}
-          </Typography>
-        </View>
-        <View style={styles.iconCircle}>
-          <Bell size={20} color="#1C1C1E" />
-        </View>
+    <View style={styles.content}>
+      <View>
+        <Typography variant="body" color="#8E8E93">
+          Selamat Datang,
+        </Typography>
+        <Typography variant="h2" style={styles.name}>
+          {name}
+        </Typography>
+      </View>
+      <View style={styles.iconCircle}>
+        <Bell size={20} color="#1C1C1E" />
       </View>
     </View>
   );

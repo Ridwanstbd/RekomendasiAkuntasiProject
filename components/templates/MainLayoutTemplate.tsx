@@ -18,7 +18,13 @@ export const MainLayoutTemplate: React.FC<MainLayoutTemplateProps> = ({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top + 10 },
+        { backgroundColor },
+      ]}
+    >
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
         showsVerticalScrollIndicator={false}
