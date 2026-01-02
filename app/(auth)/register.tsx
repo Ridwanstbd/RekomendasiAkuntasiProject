@@ -1,85 +1,135 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { UserPlus, ArrowLeft } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Typography } from "../../components/atoms/Typography";
+import { UserPlus } from "lucide-react-native";
+import * as SecureStore from "expo-secure-store";
 import { FormField } from "../../components/molecules/FormField";
 import { Button } from "../../components/atoms/Button";
+import { HeroFormTemplate } from "@/components/organisms/HeroFormTemplate";
+import api from "@/services/api";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const [name, setName] = useState("");
+
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+
+  const handleRegister = async () => {
+    if (!username || !firstName || !lastName || !email || !password || !phone) {
+      setError("Semua field harus terisi!");
+      return;
+    }
+
+    setLoading(true);
+    setError(undefined);
+
+    try {
+      await api.post("/api/auth/register", {
+        username,
+        email,
+        password,
+        profile: {
+          firstName,
+          lastName,
+          phone,
+        },
+      });
+
+      const loginResponse = await api.post("/api/auth/login", {
+        email,
+        password,
+      });
+
+      if (loginResponse.data.token) {
+        await SecureStore.setItemAsync("userToken", loginResponse.data.token);
+
+        Alert.alert(
+          "Registrasi Berhasil",
+          "Akun Anda telah dibuat dan Anda otomatis masuk.",
+          [
+            {
+              text: "Lanjutkan",
+              onPress: () => router.replace("/(tabs)/dashboard"),
+            },
+          ]
+        );
+      } else {
+        router.replace("/(auth)/login");
+      }
+    } catch (err: any) {
+      const message = err.response?.data?.message || "Gagal mendaftarkan akun";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft size={24} color="#1A1A1A" />
-        </TouchableOpacity>
+    <HeroFormTemplate showTab={true}>
+      <FormField
+        label="Nama Pengguna"
+        placeholder="ridwanstbd"
+        value={username}
+        onChangeText={setUsername}
+      />
 
-        <View style={styles.header}>
-          <Typography variant="h1">Daftar Akun</Typography>
-          <Typography variant="body" color="#666">
-            Lengkapi data untuk bergabung
-          </Typography>
-        </View>
+      <FormField
+        label="Nama Depan"
+        placeholder="Ridwan"
+        value={firstName}
+        onChangeText={setFirstName}
+      />
 
-        <View style={styles.form}>
-          <FormField
-            label="Nama Lengkap"
-            placeholder="Masukkan nama lengkap"
-            value={name}
-            onChangeText={setName}
-          />
-          <FormField
-            label="Email"
-            placeholder="nama@email.com"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-          />
-          <FormField
-            label="Password"
-            placeholder="Minimal 8 karakter"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+      <FormField
+        label="Nama Belakang"
+        placeholder="Setio Budi"
+        value={lastName}
+        onChangeText={setLastName}
+      />
 
-          <Button
-            title="Buat Akun"
-            variant="primary"
-            icon={UserPlus}
-            onPress={() => router.replace("/(tabs)/explore")}
-            style={{ marginTop: 12 }}
-          />
-        </View>
+      <FormField
+        label="Nomor Telepon"
+        type="number"
+        placeholder="0812..."
+        value={phone}
+        onChangeText={setPhone}
+      />
 
-        <View style={styles.footer}>
-          <Typography variant="body">Sudah punya akun? </Typography>
-          <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
-            <Typography
-              variant="body"
-              color="#007AFF"
-              style={{ fontWeight: "600" }}
-            >
-              Login
-            </Typography>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <FormField
+        label="Email"
+        placeholder="nama@email.com"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        error={error}
+      />
+
+      <FormField
+        label="Password"
+        placeholder="Minimal 8 karakter"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        type="password"
+      />
+
+      <Button
+        title={loading ? "Mendaftarkan..." : "Buat Akun"}
+        variant="primary"
+        icon={!loading ? UserPlus : undefined}
+        onPress={handleRegister}
+        style={{ marginTop: 12 }}
+        isLoading={loading}
+      />
+    </HeroFormTemplate>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF" },
-  content: { padding: 24 },
-  backBtn: { marginBottom: 24, marginTop: 10 },
-  header: { marginBottom: 32 },
-  form: { gap: 4 },
-  footer: { flexDirection: "row", justifyContent: "center", marginTop: 32 },
-});

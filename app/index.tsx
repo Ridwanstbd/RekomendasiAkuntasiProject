@@ -48,12 +48,7 @@ export default function SplashScreen() {
 
         {/* Brand Name */}
         <Typography variant="h1" style={styles.brandName}>
-          NEXUS APP
-        </Typography>
-
-        {/* Subtitle / Version */}
-        <Typography variant="caption" color="#999">
-          Build with React Expo & Atomic Design
+          ACCOUNTING APP
         </Typography>
       </Animated.View>
 

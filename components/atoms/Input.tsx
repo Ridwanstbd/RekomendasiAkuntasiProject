@@ -10,10 +10,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+type InputType = "text" | "number" | "password" | "textarea";
+
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   containerStyle?: ViewStyle;
+  type?: InputType; // Prop baru
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -21,28 +24,43 @@ export const Input: React.FC<InputProps> = ({
   error,
   secureTextEntry,
   containerStyle,
+  type = "text",
+  style,
   ...props
 }) => {
-  // State untuk toggle show/hide password
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-  // Logika untuk menentukan apakah teks harus disembunyikan
-  const shouldHideText = secureTextEntry && !isPasswordVisible;
+  // Password hanya aktif jika type="password" atau secureTextEntry={true}
+  const isPassword = type === "password" || secureTextEntry;
+  const shouldHideText = isPassword && !isPasswordVisible;
 
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
 
-      <View style={[styles.inputContainer, error ? styles.inputError : null]}>
+      <View
+        style={[
+          styles.inputContainer,
+          error ? styles.inputError : null,
+          type === "textarea" ? styles.textAreaContainer : null, // Penyesuaian tinggi textarea
+        ]}
+      >
         <TextInput
-          style={styles.textInput}
+          style={[
+            styles.textInput,
+            type === "textarea" ? styles.textAreaInput : null, // Penyesuaian perataan teks
+            style,
+          ]}
           secureTextEntry={shouldHideText}
           placeholderTextColor="#999"
+          // Logika variasi
+          multiline={type === "textarea"}
+          numberOfLines={type === "textarea" ? 4 : 1}
+          keyboardType={type === "number" ? "numeric" : "default"}
           {...props}
         />
 
-        {/* Tampilkan ikon mata hanya jika secureTextEntry bernilai true */}
-        {secureTextEntry && (
+        {isPassword && (
           <TouchableOpacity
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
             style={styles.iconContainer}
@@ -81,6 +99,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
   },
+  textAreaContainer: {
+    alignItems: "flex-start", // Ikon/teks mulai dari atas
+    minHeight: 100,
+  },
   inputError: {
     borderColor: "#FF3B30",
   },
@@ -90,8 +112,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
   },
+  textAreaInput: {
+    paddingTop: 14,
+    textAlignVertical: "top", // Penting untuk Android agar teks mulai dari atas
+  },
   iconContainer: {
     padding: 4,
+    marginTop: 10, // Menyesuaikan posisi jika textarea
   },
   errorText: {
     color: "#FF3B30",
