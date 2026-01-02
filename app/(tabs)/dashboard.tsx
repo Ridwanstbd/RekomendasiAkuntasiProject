@@ -11,6 +11,7 @@ import { Header } from "@/components/organisms/Header";
 import { SelectField } from "@/components/organisms/SelectField";
 import { Card } from "@/components/atoms/Card";
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
+import { Loader } from "@/components/atoms/Loader";
 
 interface Business {
   id: string;
@@ -63,11 +64,7 @@ export default function DashboardScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
-    );
+    return <Loader />;
   }
 
   return (
@@ -83,7 +80,7 @@ export default function DashboardScreen() {
           value={selectedId}
           onSelect={(option) => handleSwitchBusiness(option.id)}
         />
-        <Card style={styles.summaryCard}>
+        <Card>
           <Typography variant="body">Total Saldo</Typography>
           <Typography variant="h1" style={{ marginTop: 2 }}>
             Rp 0
@@ -93,13 +90,3 @@ export default function DashboardScreen() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  pagePadding: {
-    paddingHorizontal: 20,
-  },
-  summaryCard: {
-    marginTop: 10,
-  },
-});

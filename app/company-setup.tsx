@@ -1,15 +1,10 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { CheckCircle2, Wallet, ArrowRight } from "lucide-react-native";
 import * as SecureStore from "expo-secure-store";
-import { FormField } from "../components/molecules/FormField";
-import { Button } from "../components/atoms/Button";
-import { Typography } from "../components/atoms/Typography";
-import { HeroFormTemplate } from "@/components/organisms/HeroFormTemplate";
-import { SelectField } from "@/components/organisms/SelectField";
 import api from "@/services/api";
 import DEFAULT_ACCOUNTS from "@/services/constant";
+import { SetupTemplate } from "@/components/templates/SetupTemplate";
 
 export default function CompanySetupScreen() {
   const router = useRouter();
@@ -134,140 +129,20 @@ export default function CompanySetupScreen() {
   };
 
   return (
-    <HeroFormTemplate
-      title={
-        currentStep === 1
-          ? "Siapkan Bisnis"
-          : currentStep === 2
-          ? "Mohon Tunggu"
-          : "Modal Awal"
-      }
-      subtitle={
-        currentStep === 1
-          ? "Langkah awal menuju manajemen keuangan profesional."
-          : currentStep === 2
-          ? "Kami sedang menyiapkan lingkungan akuntansi Anda."
-          : "Masukkan saldo kas awal untuk memulai pembukuan."
-      }
-      showTab={false}
-    >
-      {currentStep === 1 && (
-        <View>
-          <FormField
-            label="Nama Bisnis"
-            placeholder="Contoh: PT. Berkah Jaya Abadi"
-            value={name}
-            onChangeText={setName}
-          />
-
-          <SelectField
-            label="Status Usaha"
-            placeholder="Pilih Status"
-            options={[
-              { id: "NEW", label: "Usaha Baru (Mulai dari Nol)" },
-              { id: "EXISTING", label: "Usaha Sudah Berjalan" },
-            ]}
-            value={businessStatus}
-            onSelect={(opt) => setBusinessStatus(opt.id)}
-            icon={Wallet}
-          />
-
-          <FormField
-            label="Deskripsi"
-            placeholder="Jelaskan bidang usaha Anda..."
-            type="textarea"
-            value={description}
-            onChangeText={setDescription}
-            style={{ height: 80 }}
-          />
-
-          <Button
-            title="Lanjutkan"
-            onPress={handleSetup}
-            isLoading={loading}
-            style={{ marginTop: 20 }}
-          />
-        </View>
-      )}
-
-      {currentStep === 2 && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Typography variant="h2" style={styles.statusText}>
-            {statusMessage}
-          </Typography>
-          <View style={styles.stepperWrapper}>
-            <StepItem
-              label="Entitas Bisnis"
-              active={
-                statusMessage.includes("akun") || statusMessage.includes("siap")
-              }
-            />
-            <StepItem
-              label="Bagan Akun (CoA)"
-              active={statusMessage.includes("siap")}
-            />
-          </View>
-        </View>
-      )}
-
-      {currentStep === 3 && (
-        <View>
-          <Typography variant="body" style={{ marginBottom: 20 }}>
-            Berapa saldo kas tunai yang Anda miliki saat ini untuk memulai
-            usaha?
-          </Typography>
-
-          <FormField
-            label="Jumlah Modal (Kas)"
-            placeholder="Contoh: 5000000"
-            type="number"
-            value={initialCapital}
-            onChangeText={setInitialCapital}
-          />
-
-          <Button
-            title="Simpan & Selesai"
-            icon={ArrowRight}
-            onPress={handleSaveInitialCapital}
-            isLoading={loading}
-            style={{ marginTop: 12 }}
-          />
-
-          <Button
-            title="Lewati, Atur Nanti"
-            variant="outline"
-            onPress={() => router.replace("/(tabs)/dashboard")}
-            disabled={loading}
-          />
-        </View>
-      )}
-    </HeroFormTemplate>
+    <SetupTemplate
+      currentStep={currentStep}
+      loading={loading}
+      statusMessage={statusMessage}
+      formState={{ name, description, businessStatus, initialCapital }}
+      handlers={{
+        setName,
+        setDescription,
+        setBusinessStatus: (opt) => setBusinessStatus(opt.id),
+        setInitialCapital,
+        handleSetup,
+        handleSaveInitialCapital,
+        onSkip: () => router.replace("/(tabs)/dashboard"),
+      }}
+    />
   );
 }
-
-const StepItem = ({ label, active }: { label: string; active: boolean }) => (
-  <View style={styles.stepItem}>
-    <CheckCircle2 size={20} color={active ? "#34C759" : "#D1D1D6"} />
-    <Typography
-      variant="body"
-      style={{ marginLeft: 10, color: active ? "#1C1C1E" : "#8E8E93" }}
-    >
-      {label}
-    </Typography>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  loadingContainer: { alignItems: "center", paddingVertical: 40 },
-  statusText: { marginTop: 20, textAlign: "center" },
-  stepperWrapper: { marginTop: 40, width: "100%" },
-  stepItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
-    backgroundColor: "#F2F2F7",
-    padding: 15,
-    borderRadius: 12,
-  },
-});
