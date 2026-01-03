@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { Building2 } from "lucide-react-native";
 import api from "@/services/api";
-
+import { jwtDecode } from "jwt-decode";
 // Atomic Components
 import { Typography } from "@/components/atoms/Typography";
 import { Header } from "@/components/organisms/Header";
@@ -18,11 +18,18 @@ interface Business {
   name: string;
 }
 
+interface UserTokenPayload {
+  username: string;
+  firstName: string;
+  lastName: string;
+}
+
 export default function DashboardScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
+  const [userName, setUsername] = useState<string>("User");
 
   useEffect(() => {
     initDashboard();
@@ -30,6 +37,18 @@ export default function DashboardScreen() {
 
   const initDashboard = async () => {
     try {
+      setLoading(true);
+
+      const token = await SecureStore.getItemAsync("userToken");
+      if (token) {
+        try {
+          const decoded = jwtDecode<UserTokenPayload>(token);
+          setUsername(decoded.firstName + " " + decoded.lastName || "User");
+        } catch (decodeError) {
+          console.error("Gagal mendekode Token : ", decodeError);
+        }
+      }
+
       const response = await api.get("/api/business/my-businesses");
       const data = response.data.data;
 
@@ -70,7 +89,7 @@ export default function DashboardScreen() {
   return (
     <>
       <MainLayoutTemplate onRefresh={() => {}}>
-        <Header name="User" />
+        <Header name={userName} />
         <SelectField
           label="Bisnis Aktif"
           placeholder="Pilih Bisnis"

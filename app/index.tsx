@@ -16,9 +16,13 @@ export default function SplashScreen() {
         "hasSeenOnboarding"
       );
 
+      const userToken = await SecureStore.getItemAsync("userToken");
+
       setTimeout(() => {
         if (hasSeenOnboarding === "true") {
           router.replace("/(auth)/login");
+        } else if (userToken) {
+          router.replace("/(tabs)/dashboard");
         } else {
           router.replace("/onboarding");
         }
