@@ -108,7 +108,10 @@ export default function CompanySetupScreen() {
         ],
       };
 
-      await api.post("/api/journals", journalPayload);
+      const createRes = await api.post("/api/journals", journalPayload);
+      const journalId = createRes.data.data.id;
+      await api.patch(`/api/journals/${journalId}/post`);
+
       Alert.alert("Sukses", "Modal awal berhasil dicatat!");
       router.replace("/(tabs)/dashboard");
     } catch (err: any) {

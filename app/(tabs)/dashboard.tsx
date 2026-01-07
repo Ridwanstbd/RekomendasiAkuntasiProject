@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { Building2 } from "lucide-react-native";
 import api from "@/services/api";
-import { jwtDecode } from "jwt-decode";
 // Atomic Components
 import { Typography } from "@/components/atoms/Typography";
 import { Header } from "@/components/organisms/Header";
@@ -18,18 +16,13 @@ interface Business {
   name: string;
 }
 
-interface UserTokenPayload {
-  username: string;
-  firstName: string;
-  lastName: string;
-}
-
 export default function DashboardScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
-  const [userName, setUsername] = useState<string>("User");
+  const [userName, setUserName] = useState<string>("User");
+  const [totalAsset, setTotalAsset] = useState<number>(0);
 
   useEffect(() => {
     initDashboard();
@@ -39,24 +32,21 @@ export default function DashboardScreen() {
     try {
       setLoading(true);
 
-      const token = await SecureStore.getItemAsync("userToken");
-      if (token) {
-        try {
-          const decoded = jwtDecode<UserTokenPayload>(token);
-          setUsername(decoded.firstName + " " + decoded.lastName || "User");
-        } catch (decodeError) {
-          console.error("Gagal mendekode Token : ", decodeError);
+      try {
+        const userRes = await api.get("/api/auth/me");
+        if (userRes.data.success) {
+          setUserName(userRes.data.data.name);
         }
+      } catch (userErr) {
+        console.error("Gagal mengambil profil:", userErr);
       }
 
       const response = await api.get("/api/business/my-businesses");
       const data = response.data.data;
 
-      // Cek apakah ada data bisnis
       if (data && data.length > 0) {
         setBusinesses(data);
 
-        // Ambil ID yang tersimpan di SecureStore atau gunakan yang pertama
         const savedId = await SecureStore.getItemAsync("businessId");
         const initialId =
           data.find((b: Business) => b.id === savedId)?.id || data[0].id;
@@ -73,13 +63,27 @@ export default function DashboardScreen() {
     }
   };
 
+  const fetchSummaryData = async (businessId: string) => {
+    try {
+      const response = await api.get(`/api/accounts?type=ASSET`);
+      const accounts = response.data.data;
+
+      const total = accounts.reduce((acc: number, curr: any) => {
+        return acc + parseFloat(curr.balance || 0);
+      }, 0);
+
+      setTotalAsset(total);
+    } catch (error) {
+      console.error("Gagal mengambil saldo asset:", error);
+      setTotalAsset(0);
+    }
+  };
+
   const handleSwitchBusiness = async (id: string) => {
     setSelectedId(id);
-    // Simpan ID ke SecureStore agar Axios Interceptor bisa membacanya
     await SecureStore.setItemAsync("businessId", id);
 
-    // Di sini kamu bisa memanggil API lain yang membutuhkan x-business-id
-    // Contoh: fetchSummaryData(id);
+    await fetchSummaryData(id);
   };
 
   if (loading) {
@@ -100,9 +104,13 @@ export default function DashboardScreen() {
           onSelect={(option) => handleSwitchBusiness(option.id)}
         />
         <Card>
-          <Typography variant="body">Total Saldo</Typography>
+          <Typography variant="body">Total Saldo Asset</Typography>
           <Typography variant="h1" style={{ marginTop: 2 }}>
-            Rp 0
+            {new Intl.NumberFormat("id-ID", {
+              style: "currency",
+              currency: "IDR",
+              minimumFractionDigits: 0,
+            }).format(totalAsset)}
           </Typography>
         </Card>
       </MainLayoutTemplate>

@@ -12,8 +12,8 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#007AFF", // Warna biru aktif
-        tabBarInactiveTintColor: "#8E8E93", // Warna abu-abu inaktif
+        tabBarActiveTintColor: "#007AFF",
+        tabBarInactiveTintColor: "#8E8E93",
         tabBarStyle: {
           backgroundColor: "#FFFFFF",
           borderTopWidth: 1,
@@ -39,8 +39,9 @@ export default function TabLayout() {
         }}
       />
 
+      {/* 1. Ubah nama rute menjadi create/index */}
       <Tabs.Screen
-        name="create"
+        name="create/index"
         options={{
           title: "Catat",
           tabBarIcon: ({ color, size }) => (
@@ -74,6 +75,13 @@ export default function TabLayout() {
         options={{
           title: "Profil",
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+        }}
+      />
+
+      <Tabs.Screen
+        name="create/form"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

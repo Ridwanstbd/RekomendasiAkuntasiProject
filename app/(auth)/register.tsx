@@ -1,8 +1,6 @@
 import React, { useState } from "react";
-import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { UserPlus } from "lucide-react-native";
-import * as SecureStore from "expo-secure-store";
 import { FormField } from "../../components/molecules/FormField";
 import { Button } from "../../components/atoms/Button";
 import { HeroFormTemplate } from "@/components/organisms/HeroFormTemplate";
@@ -17,13 +15,12 @@ export default function RegisterScreen() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
   const handleRegister = async () => {
-    if (!username || !firstName || !lastName || !email || !password || !phone) {
+    if (!username || !firstName || !lastName || !email || !password) {
       setError("Semua field harus terisi!");
       return;
     }
@@ -36,11 +33,8 @@ export default function RegisterScreen() {
         username,
         email,
         password,
-        profile: {
-          firstName,
-          lastName,
-          phone,
-        },
+        firstName,
+        lastName,
       });
 
       router.replace("/(auth)/login");
@@ -73,14 +67,6 @@ export default function RegisterScreen() {
         placeholder="Setio Budi"
         value={lastName}
         onChangeText={setLastName}
-      />
-
-      <FormField
-        label="Nomor Telepon"
-        type="number"
-        placeholder="0812..."
-        value={phone}
-        onChangeText={setPhone}
       />
 
       <FormField
