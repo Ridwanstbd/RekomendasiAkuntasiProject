@@ -12,6 +12,8 @@ api.interceptors.request.use(async (config) => {
   const token = await SecureStore.getItemAsync("userToken");
   const businessId = await SecureStore.getItemAsync("businessId");
 
+  console.log("DEBUG: Mengambil Business ID dari Storage:", businessId);
+
   if (token) config.headers.Authorization = `Bearer ${token}`;
   if (businessId) config.headers["x-business-id"] = businessId;
 

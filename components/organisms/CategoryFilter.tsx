@@ -15,7 +15,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
     { id: "ALL", label: "Semua" },
     { id: "SALES", label: "Penjualan" },
     { id: "PURCHASE", label: "Pembelian" },
-    { id: "PAYMENT", label: "Biaya" },
+    { id: "EXPENSE", label: "Biaya" },
     { id: "GENERAL", label: "Umum" },
   ];
 

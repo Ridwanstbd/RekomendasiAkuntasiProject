@@ -30,7 +30,7 @@ export const ExpenseForm: React.FC = () => {
       const totalAmount = parseFloat(amount);
       const journalPayload = {
         date: new Date().toISOString(),
-        type: "PAYMENT",
+        type: "EXPENSE",
         reference: description,
         entries: [
           {

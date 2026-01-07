@@ -16,7 +16,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ item }) => {
         return { label: "Penjualan", color: "#34C759" };
       case "PURCHASE":
         return { label: "Pembelian", color: "#007AFF" };
-      case "PAYMENT":
+      case "EXPENSE":
         return { label: "Biaya", color: "#FF3B30" };
       default:
         return { label: "Umum/Lainnya", color: "#8E8E93" };

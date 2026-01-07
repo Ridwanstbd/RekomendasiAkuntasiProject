@@ -84,6 +84,48 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="reports/profit-loss"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="reports/ledger"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="reports/balance-sheet"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="reports/export"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="custom-recommendations"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="recommendations"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="change-password"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

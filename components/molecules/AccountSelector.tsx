@@ -11,7 +11,7 @@ interface Account {
 
 interface AccountSelectorProps {
   label: string;
-  type: "ASSET" | "REVENUE" | "EXPENSE" | "EQUITY" | "LIABILITY";
+  type?: "ASSET" | "REVENUE" | "EXPENSE" | "EQUITY" | "LIABILITY";
   selectedId: string;
   onSelect: (id: string) => void;
 }
@@ -27,7 +27,8 @@ export const AccountSelector: React.FC<AccountSelectorProps> = ({
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        const res = await api.get(`/api/accounts?type=${type}`);
+        const url = type ? `/api/accounts?type=${type}` : "/api/accounts";
+        const res = await api.get(url);
         setAccounts(res.data.data);
       } catch (err) {
         console.error("Gagal mengambil akun:", err);
@@ -39,7 +40,9 @@ export const AccountSelector: React.FC<AccountSelectorProps> = ({
   return (
     <SelectField
       label={label}
-      placeholder={`Pilih Akun ${type === "ASSET" ? "Penerima" : "Pendapatan"}`}
+      // Placeholder lebih umum jika type tidak ditentukan
+      placeholder={type ? `Pilih Akun ${type}` : "Pilih Akun Akuntansi"}
+      modalTitle="Daftar Akun"
       options={accounts.map((a) => ({
         id: a.id,
         label: `${a.code} - ${a.name}`,
