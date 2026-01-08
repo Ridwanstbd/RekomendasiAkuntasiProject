@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Alert, ActivityIndicator } from "react-native";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import * as SecureStore from "expo-secure-store"; // Tambahkan ini
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
 import { Typography } from "@/components/atoms/Typography";
 import { FormatSelector } from "@/components/molecules/FormatSelector";
 import { PressableCard } from "@/components/atoms/PressableCard";
-import { DateRangePicker } from "@/components/molecules/DateRangePicker"; // Import Komponen Baru
+import { DateRangePicker } from "@/components/molecules/DateRangePicker";
 import { Download } from "lucide-react-native";
 import api from "@/services/api";
 
@@ -14,7 +15,6 @@ export default function ExportScreen() {
   const [loading, setLoading] = useState(false);
   const [format, setFormat] = useState<"pdf" | "xlsx">("pdf");
 
-  // State tanggal yang dinamis untuk filter ekspor
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
       .toISOString()
@@ -26,55 +26,64 @@ export default function ExportScreen() {
     try {
       setLoading(true);
 
-      // Debugging: Cek isi modul FileSystem
-      console.log("FileSystem Object:", FileSystem);
+      const token = await SecureStore.getItemAsync("userToken");
+      const businessId = await SecureStore.getItemAsync("businessId");
 
-      // Gunakan Type Assertion untuk menghindari error TypeScript yang tidak sinkron
-      const fs = FileSystem as any;
-      const baseDir = fs.documentDirectory || fs.cacheDirectory;
-
-      if (!baseDir) {
-        // Jika masih null, kemungkinan besar native module belum ter-link
-        throw new Error(
-          "Native Module FileSystem tidak ditemukan. Coba jalankan 'npx expo run:android' atau restart Expo Go Anda."
-        );
+      if (!token || !businessId) {
+        throw new Error("Sesi berakhir. Silakan login kembali.");
       }
 
+      const fs = FileSystem as any;
+      let rawDir =
+        fs.documentDirectory ||
+        fs.cacheDirectory ||
+        (fs.Paths ? fs.Paths.document : null);
+
+      let baseDir: string = "";
+      if (typeof rawDir === "string") {
+        baseDir = rawDir;
+      } else if (rawDir && typeof rawDir === "object" && rawDir.uri) {
+        baseDir = rawDir.uri;
+      }
+
+      if (!baseDir) {
+        throw new Error("Sistem penyimpanan tidak valid.");
+      }
+
+      const safeBaseDir = baseDir.endsWith("/") ? baseDir : `${baseDir}/`;
       const fileName = `Laporan_${format.toUpperCase()}_${Date.now()}.${format}`;
-      const fileUri = `${baseDir}${fileName}`;
+      const fileUri = `${safeBaseDir}${fileName}`;
 
       const downloadUrl = `/api/reports/export/profit-loss?format=${format}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
-
-      // Ambil header x-business-id dari konfigurasi axios
-      const headers = {
-        "x-business-id": api.defaults.headers.common["x-business-id"] as string,
-        Authorization: api.defaults.headers.common["Authorization"] as string,
-      };
-
-      // Gunakan URL absolut dari baseURL + endpoint
       const fullUrl = `${api.defaults.baseURL}${downloadUrl}`;
+
+      // 2. Pastikan Header dikirim dengan format yang benar
+      const headers = {
+        "x-business-id": businessId,
+        Authorization: `Bearer ${token}`, // Pastikan ada prefix 'Bearer '
+      };
 
       const downloadRes = await FileSystem.downloadAsync(fullUrl, fileUri, {
         headers,
       });
 
+      // Jika server masih membalas 401, berarti token di SecureStore sudah expired
+      if (downloadRes.status === 401) {
+        throw new Error("Sesi tidak sah (401). Silakan login ulang.");
+      }
+
       if (downloadRes.status !== 200) {
-        throw new Error(
-          `Server merespon dengan status ${downloadRes.status}. Gagal mengunduh file.`
-        );
+        throw new Error(`Gagal mengunduh (Status: ${downloadRes.status}).`);
       }
 
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(downloadRes.uri);
       } else {
-        Alert.alert(
-          "Berhasil",
-          "File disimpan di penyimpanan lokal perangkat."
-        );
+        Alert.alert("Berhasil", "File disimpan di: " + downloadRes.uri);
       }
     } catch (err: any) {
-      console.error("Export Error Log:", err);
-      Alert.alert("Gagal Ekspor", err.message || "Terjadi kesalahan sistem.");
+      console.error("Export Auth Error:", err.message);
+      Alert.alert("Gagal Ekspor", err.message);
     } finally {
       setLoading(false);
     }
@@ -84,7 +93,7 @@ export default function ExportScreen() {
     <MainLayoutTemplate onRefresh={() => {}}>
       <Typography variant="h1">Ekspor Laporan</Typography>
       <Typography variant="body" style={styles.subtitle}>
-        Unduh dokumen keuangan resmi Anda.
+        Laporan akan diunduh dan dapat dibagikan langsung.
       </Typography>
 
       <Typography variant="h2" style={styles.sectionTitle}>
@@ -95,7 +104,6 @@ export default function ExportScreen() {
       <Typography variant="h2" style={styles.sectionTitle}>
         Tentukan Periode
       </Typography>
-      {/* Integrasi DateRangePicker */}
       <DateRangePicker
         startDate={dateRange.startDate}
         endDate={dateRange.endDate}
@@ -133,10 +141,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 18,
     borderWidth: 0,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
     marginTop: 10,
   },
   disabledBtn: { backgroundColor: "#A7D1FF" },

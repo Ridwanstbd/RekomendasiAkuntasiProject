@@ -41,33 +41,33 @@ api.interceptors.response.use(
   }
 );
 
-// Log setiap Request yang keluar
-api.interceptors.request.use((request) => {
-  console.log("===== API REQUEST =====");
-  console.log("URL:", request.url);
-  console.log("Method:", request.method?.toUpperCase());
-  console.log("Headers:", JSON.stringify(request.headers, null, 2));
-  console.log("Body:", JSON.stringify(request.data, null, 2));
-  console.log("=======================");
-  return request;
-});
+// // Log setiap Request yang keluar
+// api.interceptors.request.use((request) => {
+//   console.log("===== API REQUEST =====");
+//   console.log("URL:", request.url);
+//   console.log("Method:", request.method?.toUpperCase());
+//   console.log("Headers:", JSON.stringify(request.headers, null, 2));
+//   console.log("Body:", JSON.stringify(request.data, null, 2));
+//   console.log("=======================");
+//   return request;
+// });
 
-// Log setiap Response yang masuk
-api.interceptors.response.use(
-  (response) => {
-    console.log("===== API RESPONSE =====");
-    console.log("Status:", response.status);
-    console.log("Data:", JSON.stringify(response.data, null, 2));
-    console.log("========================");
-    return response;
-  },
-  (error) => {
-    console.log("===== API ERROR =====");
-    console.log("Status:", error.response?.status);
-    console.log("Error Data:", JSON.stringify(error.response?.data, null, 2));
-    console.log("=====================");
-    return Promise.reject(error);
-  }
-);
+// // Log setiap Response yang masuk
+// api.interceptors.response.use(
+//   (response) => {
+//     console.log("===== API RESPONSE =====");
+//     console.log("Status:", response.status);
+//     console.log("Data:", JSON.stringify(response.data, null, 2));
+//     console.log("========================");
+//     return response;
+//   },
+//   (error) => {
+//     console.log("===== API ERROR =====");
+//     console.log("Status:", error.response?.status);
+//     console.log("Error Data:", JSON.stringify(error.response?.data, null, 2));
+//     console.log("=====================");
+//     return Promise.reject(error);
+//   }
+// );
 
 export default api;
