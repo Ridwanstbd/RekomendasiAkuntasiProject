@@ -31,7 +31,7 @@ export const ExpenseForm: React.FC = () => {
       const journalPayload = {
         date: new Date().toISOString(),
         type: "EXPENSE",
-        reference: description,
+        reference: `${description} (${new Date().getTime()})`,
         entries: [
           {
             debitAccountId: expenseAccountId,
