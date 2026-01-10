@@ -4,7 +4,7 @@ import { Alert } from "react-native";
 import { router } from "expo-router";
 
 const api = axios.create({
-  baseURL: "https://api.finance.zetashop.my.id",
+  baseURL: "http://203.194.113.228",
   // baseURL: "http://192.168.240.1:3000",
   timeout: 10000,
 });
@@ -12,8 +12,6 @@ const api = axios.create({
 api.interceptors.request.use(async (config) => {
   const token = await SecureStore.getItemAsync("userToken");
   const businessId = await SecureStore.getItemAsync("businessId");
-
-  console.log("DEBUG: Mengambil Business ID dari Storage:", businessId);
 
   if (token) config.headers.Authorization = `Bearer ${token}`;
   if (businessId) config.headers["x-business-id"] = businessId;
