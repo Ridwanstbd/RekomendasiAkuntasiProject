@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "RekomendasiAkuntasiProject",
-    "slug": "RekomendasiAkuntasiProject",
-    "version": "1.0.0",
+    "name": "RekomendasiAkuntansiProject",
+    "slug": "RekomendasiAkuntansiProject",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "rekomendasiakuntasiproject",
+    "scheme": "rekomendasiakuntansiproject",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -46,6 +46,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fda66e8c-1fff-4721-8055-db6532c19b4b"
+      }
     }
   }
 }
