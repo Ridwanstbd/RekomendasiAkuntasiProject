@@ -111,6 +111,7 @@ export const ExpenseForm: React.FC = () => {
         title={loading ? statusMsg : "Bayar Sekarang"}
         onPress={handleSubmit}
         isLoading={loading}
+        disabled={loading}
         style={{ marginTop: 20 }}
       />
     </View>
