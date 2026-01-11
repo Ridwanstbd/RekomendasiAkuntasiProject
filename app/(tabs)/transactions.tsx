@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react"; // Tambahkan useCallback
 import { FlatList, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native"; // Import useFocusEffect
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
 import { Typography } from "@/components/atoms/Typography";
 import { CategoryFilter } from "@/components/organisms/CategoryFilter";
@@ -29,9 +30,15 @@ export default function TransactionsScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchJournals();
-  }, [filter]);
+  // Mengganti useEffect dengan useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      fetchJournals();
+
+      // Optional: return cleanup function jika diperlukan
+      // return () => { console.log('Screen loses focus'); };
+    }, [filter]) // Akan dipanggil setiap kali layar fokus ATAU filter berubah
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -54,7 +61,7 @@ export default function TransactionsScreen() {
           data={journals}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <TransactionItem item={item} />}
-          scrollEnabled={false} // Karena dibungkus ScrollView di Template
+          scrollEnabled={false}
           ListEmptyComponent={
             <View style={{ alignItems: "center", marginTop: 40 }}>
               <Typography variant="body">

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
-import * as Sharing from "expo-sharing";
-import * as SecureStore from "expo-secure-store"; // Tambahkan ini
+import * as MediaLibrary from "expo-media-library";
+import * as SecureStore from "expo-secure-store";
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
 import { Typography } from "@/components/atoms/Typography";
 import { FormatSelector } from "@/components/molecules/FormatSelector";
@@ -26,6 +26,13 @@ export default function ExportScreen() {
     try {
       setLoading(true);
 
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") {
+        throw new Error(
+          "Izin akses penyimpanan diperlukan untuk mengunduh file."
+        );
+      }
+
       const token = await SecureStore.getItemAsync("userToken");
       const businessId = await SecureStore.getItemAsync("businessId");
 
@@ -33,41 +40,22 @@ export default function ExportScreen() {
         throw new Error("Sesi berakhir. Silakan login kembali.");
       }
 
-      const fs = FileSystem as any;
-      let rawDir =
-        fs.documentDirectory ||
-        fs.cacheDirectory ||
-        (fs.Paths ? fs.Paths.document : null);
-
-      let baseDir: string = "";
-      if (typeof rawDir === "string") {
-        baseDir = rawDir;
-      } else if (rawDir && typeof rawDir === "object" && rawDir.uri) {
-        baseDir = rawDir.uri;
-      }
-
-      if (!baseDir) {
-        throw new Error("Sistem penyimpanan tidak valid.");
-      }
-
-      const safeBaseDir = baseDir.endsWith("/") ? baseDir : `${baseDir}/`;
       const fileName = `Laporan_${format.toUpperCase()}_${Date.now()}.${format}`;
-      const fileUri = `${safeBaseDir}${fileName}`;
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
 
       const downloadUrl = `/api/reports/export/profit-loss?format=${format}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
       const fullUrl = `${api.defaults.baseURL}${downloadUrl}`;
 
-      // 2. Pastikan Header dikirim dengan format yang benar
       const headers = {
         "x-business-id": businessId,
-        Authorization: `Bearer ${token}`, // Pastikan ada prefix 'Bearer '
+        Authorization: `Bearer ${token}`,
       };
 
+      // 4. Proses Download ke Folder Internal Aplikasi
       const downloadRes = await FileSystem.downloadAsync(fullUrl, fileUri, {
         headers,
       });
 
-      // Jika server masih membalas 401, berarti token di SecureStore sudah expired
       if (downloadRes.status === 401) {
         throw new Error("Sesi tidak sah (401). Silakan login ulang.");
       }
@@ -76,13 +64,15 @@ export default function ExportScreen() {
         throw new Error(`Gagal mengunduh (Status: ${downloadRes.status}).`);
       }
 
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(downloadRes.uri);
-      } else {
-        Alert.alert("Berhasil", "File disimpan di: " + downloadRes.uri);
-      }
+      const asset = await MediaLibrary.createAssetAsync(downloadRes.uri);
+      await MediaLibrary.createAlbumAsync("Laporan_Bisnis", asset, false);
+
+      Alert.alert(
+        "Berhasil Disimpan",
+        `File ${fileName} telah disimpan ke folder 'Laporan_Bisnis' di perangkat Anda.`
+      );
     } catch (err: any) {
-      console.error("Export Auth Error:", err.message);
+      console.error("Export Error:", err.message);
       Alert.alert("Gagal Ekspor", err.message);
     } finally {
       setLoading(false);
@@ -93,7 +83,7 @@ export default function ExportScreen() {
     <MainLayoutTemplate onRefresh={() => {}}>
       <Typography variant="h1">Ekspor Laporan</Typography>
       <Typography variant="body" style={styles.subtitle}>
-        Laporan akan diunduh dan dapat dibagikan langsung.
+        Laporan akan langsung disimpan ke penyimpanan perangkat Anda.
       </Typography>
 
       <Typography variant="h2" style={styles.sectionTitle}>
@@ -123,7 +113,7 @@ export default function ExportScreen() {
             <>
               <Download size={20} color="#FFF" />
               <Typography variant="h2" style={styles.btnLabel}>
-                Unduh Laporan {format.toUpperCase()}
+                Simpan Laporan {format.toUpperCase()}
               </Typography>
             </>
           )}

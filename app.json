@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Aplikasi ini memerlukan akses ke galeri untuk menyimpan laporan keuangan Anda.",
+        "NSPhotoLibraryAddUsageDescription": "Aplikasi ini memerlukan izin untuk menambahkan file laporan ke galeri Anda."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +24,12 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.ridwanstbd.RekomendasiAkuntasiProject"
+      "package": "com.ridwanstbd.RekomendasiAkuntasiProject",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "MEDIA_LIBRARY"
+      ]
     },
     "web": {
       "output": "static",
@@ -41,7 +50,15 @@
         }
       ],
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Izinkan aplikasi mengakses galeri untuk menyimpan laporan.",
+          "savePhotosPermission": "Izinkan aplikasi menyimpan laporan ke galeri perangkat Anda.",
+          "isUsageDescriptionRequired": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
