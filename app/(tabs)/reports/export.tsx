@@ -1,14 +1,21 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Alert, ActivityIndicator } from "react-native";
-import * as FileSystem from "expo-file-system/legacy";
-import * as MediaLibrary from "expo-media-library";
+import {
+  View,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Platform,
+} from "react-native";
+// Gunakan API Modern SDK 54
+import { File, Directory, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import * as SecureStore from "expo-secure-store";
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
 import { Typography } from "@/components/atoms/Typography";
 import { FormatSelector } from "@/components/molecules/FormatSelector";
 import { PressableCard } from "@/components/atoms/PressableCard";
 import { DateRangePicker } from "@/components/molecules/DateRangePicker";
-import { Download } from "lucide-react-native";
+import { Download as DownloadIcon } from "lucide-react-native";
 import api from "@/services/api";
 
 export default function ExportScreen() {
@@ -26,54 +33,61 @@ export default function ExportScreen() {
     try {
       setLoading(true);
 
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") {
-        throw new Error(
-          "Izin akses penyimpanan diperlukan untuk mengunduh file."
-        );
-      }
-
+      // 1. Ambil Kredensial
       const token = await SecureStore.getItemAsync("userToken");
       const businessId = await SecureStore.getItemAsync("businessId");
-
-      if (!token || !businessId) {
+      if (!token || !businessId)
         throw new Error("Sesi berakhir. Silakan login kembali.");
-      }
 
-      const fileName = `Laporan_${format.toUpperCase()}_${Date.now()}.${format}`;
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-
+      // 2. Download File via API (Axios)
       const downloadUrl = `/api/reports/export/profit-loss?format=${format}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
-      const fullUrl = `${api.defaults.baseURL}${downloadUrl}`;
 
-      const headers = {
-        "x-business-id": businessId,
-        Authorization: `Bearer ${token}`,
-      };
-
-      // 4. Proses Download ke Folder Internal Aplikasi
-      const downloadRes = await FileSystem.downloadAsync(fullUrl, fileUri, {
-        headers,
+      const response = await api.get(downloadUrl, {
+        responseType: "arraybuffer", // Sangat penting untuk file biner
+        headers: {
+          "x-business-id": businessId,
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      if (downloadRes.status === 401) {
-        throw new Error("Sesi tidak sah (401). Silakan login ulang.");
+      // Konversi buffer ke Uint8Array (Format yang didukung API File baru)
+      const fileData = new Uint8Array(response.data);
+      const fileName = `Laporan_${format.toUpperCase()}_${Date.now()}.${format}`;
+      const mimeType =
+        format === "pdf"
+          ? "application/pdf"
+          : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+      // 3. Logika Penyimpanan
+      if (Platform.OS === "android") {
+        // Picker Modern SDK 54 untuk memilih folder penyimpanan
+        const directory = await Directory.pickDirectoryAsync();
+
+        if (directory) {
+          // Buat file baru di direktori yang dipilih
+          const newFile = directory.createFile(fileName, mimeType);
+          await newFile.write(fileData);
+
+          Alert.alert("Berhasil", `Laporan disimpan di: ${directory.uri}`);
+        }
+      } else {
+        // Untuk iOS: Simpan ke cache sementara lalu buka Share Sheet (Save to Files)
+        const tempFile = new File(Paths.cache, fileName);
+        await tempFile.create();
+        await tempFile.write(fileData);
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(tempFile.uri);
+        } else {
+          Alert.alert("Error", "Fitur penyimpanan tidak tersedia.");
+        }
       }
-
-      if (downloadRes.status !== 200) {
-        throw new Error(`Gagal mengunduh (Status: ${downloadRes.status}).`);
-      }
-
-      const asset = await MediaLibrary.createAssetAsync(downloadRes.uri);
-      await MediaLibrary.createAlbumAsync("Laporan_Bisnis", asset, false);
-
-      Alert.alert(
-        "Berhasil Disimpan",
-        `File ${fileName} telah disimpan ke folder 'Laporan_Bisnis' di perangkat Anda.`
-      );
     } catch (err: any) {
       console.error("Export Error:", err.message);
-      Alert.alert("Gagal Ekspor", err.message);
+      Alert.alert(
+        "Gagal Ekspor",
+        err.message || "Terjadi kesalahan saat mengunduh."
+      );
     } finally {
       setLoading(false);
     }
@@ -83,7 +97,7 @@ export default function ExportScreen() {
     <MainLayoutTemplate onRefresh={() => {}}>
       <Typography variant="h1">Ekspor Laporan</Typography>
       <Typography variant="body" style={styles.subtitle}>
-        Laporan akan langsung disimpan ke penyimpanan perangkat Anda.
+        Laporan akan diunduh dan disimpan langsung ke perangkat Anda.
       </Typography>
 
       <Typography variant="h2" style={styles.sectionTitle}>
@@ -111,9 +125,9 @@ export default function ExportScreen() {
             <ActivityIndicator color="#FFF" />
           ) : (
             <>
-              <Download size={20} color="#FFF" />
+              <DownloadIcon size={20} color="#FFF" />
               <Typography variant="h2" style={styles.btnLabel}>
-                Simpan Laporan {format.toUpperCase()}
+                Unduh Laporan {format.toUpperCase()}
               </Typography>
             </>
           )}

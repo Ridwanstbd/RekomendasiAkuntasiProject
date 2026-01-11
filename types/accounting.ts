@@ -175,6 +175,7 @@ export interface AIRecommendation {
     | "General";
   recommendationText: string;
   isCustom: boolean;
+  customPrompt?: string;
   generatedAt: string;
 }
 
