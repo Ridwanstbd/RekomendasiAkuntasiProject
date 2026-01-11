@@ -1,46 +1,78 @@
-import React, { useState, useEffect } from "react";
-import { View, StyleSheet, FlatList, Alert } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  Alert,
+  RefreshControl,
+  TouchableOpacity,
+} from "react-native";
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
 import { Typography } from "@/components/atoms/Typography";
 import { PressableCard } from "@/components/atoms/PressableCard";
 import { Loader } from "@/components/atoms/Loader";
 import { RecommendationItem } from "@/components/molecules/RecommendationItem";
 import { AIRecommendation } from "@/types/accounting";
-import { Sparkles } from "lucide-react-native";
+import {
+  Sparkles,
+  RefreshCcw,
+  History,
+  LayoutDashboard,
+} from "lucide-react-native";
 import api from "@/services/api";
 
 export default function AIRecommendationScreen() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<AIRecommendation[]>([]);
 
   const fetchHistory = async () => {
     try {
-      setLoading(true);
       const res = await api.get("/api/recommendations");
       setData(res.data.data);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const generateNew = async () => {
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchHistory();
+  }, []);
+
+  const handleGenerateOrUpdate = async (
+    year?: number,
+    month?: number,
+    isUpdate = false
+  ) => {
     try {
       setGenerating(true);
       const now = new Date();
-      const res = await api.post("/api/recommendations/monthly", {
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
+      const targetYear = year || now.getFullYear();
+      const targetMonth = month || now.getMonth() + 1;
+
+      // Backend menggunakan POST /monthly yang melakukan upsert (create or update)
+      // sesuai logic di recommendationBusinessService.js
+      await api.post("/api/recommendations/monthly", {
+        year: targetYear,
+        month: targetMonth,
+        force: true,
       });
 
-      Alert.alert("Sukses", "Rekomendasi AI baru telah dibuat.");
-      fetchHistory(); // Refresh list
+      Alert.alert(
+        isUpdate ? "Pembaruan Berhasil" : "Sukses",
+        `Analisis AI untuk periode ${targetMonth}/${targetYear} telah diperbarui berdasarkan data terbaru.`
+      );
+      fetchHistory();
     } catch (err: any) {
       Alert.alert(
         "Gagal",
-        err.response?.data?.message || "Data belum cukup untuk analisis AI."
+        err.response?.data?.message ||
+          "Data transaksi belum cukup untuk dianalisis oleh AI."
       );
     } finally {
       setGenerating(false);
@@ -52,43 +84,88 @@ export default function AIRecommendationScreen() {
   }, []);
 
   return (
-    <MainLayoutTemplate onRefresh={fetchHistory}>
-      <Typography variant="h1">Rekomendasi AI</Typography>
-      <Typography variant="body" style={{ color: "#8E8E93", marginBottom: 20 }}>
-        Gunakan AI untuk menganalisis kesehatan keuangan bisnis Anda.
-      </Typography>
+    <MainLayoutTemplate>
+      <View style={styles.header}>
+        <View>
+          <Typography variant="h1">Wawasan AI</Typography>
+          <Typography variant="body" style={styles.subtitle}>
+            Analisis cerdas untuk performa bisnis Anda
+          </Typography>
+        </View>
+        <LayoutDashboard size={28} color="#5856D6" />
+      </View>
 
+      {/* Main Action Card */}
       <PressableCard
-        onPress={generateNew}
-        style={[styles.generateBtn, generating && { opacity: 0.7 }]}
+        onPress={() => handleGenerateOrUpdate()}
+        disabled={generating}
+        style={[styles.heroCard, generating && { opacity: 0.8 }]}
       >
-        <Sparkles size={20} color="#FFF" />
-        <Typography variant="body" style={styles.btnText}>
-          {generating
-            ? "Menganalisis Data..."
-            : "Generate Rekomendasi Bulan Ini"}
-        </Typography>
+        <View style={styles.heroContent}>
+          <View style={styles.iconContainer}>
+            {generating ? (
+              <RefreshCcw size={24} color="#FFF" style={styles.rotatingIcon} />
+            ) : (
+              <Sparkles size={24} color="#FFF" />
+            )}
+          </View>
+          <View style={styles.heroTextContainer}>
+            <Typography variant="h3" style={styles.heroTitle}>
+              {generating ? "Menganalisis..." : "Generate Analisis Baru"}
+            </Typography>
+            <Typography variant="body" style={styles.heroSubtitle}>
+              Klik untuk memperbarui wawasan bulan ini
+            </Typography>
+          </View>
+        </View>
       </PressableCard>
 
-      <Typography variant="h2" style={{ marginVertical: 16 }}>
-        Riwayat Analisis
-      </Typography>
+      <View style={styles.sectionTitleRow}>
+        <History size={18} color="#8E8E93" />
+        <Typography variant="h2" style={styles.sectionTitle}>
+          Riwayat Analisis
+        </Typography>
+      </View>
 
-      {loading ? (
+      {loading && !refreshing ? (
         <Loader />
       ) : (
         <FlatList
           data={data}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <RecommendationItem item={item} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#5856D6"
+            />
+          }
+          renderItem={({ item }) => (
+            <View style={styles.itemWrapper}>
+              <RecommendationItem item={item} />
+              {/* Tombol Update Per Item */}
+              <TouchableOpacity
+                style={styles.updateBadge}
+                onPress={() =>
+                  handleGenerateOrUpdate(item.year, item.month, true)
+                }
+                disabled={generating}
+              >
+                <RefreshCcw size={12} color="#5856D6" />
+                <Typography variant="body" style={styles.updateText}>
+                  Perbarui
+                </Typography>
+              </TouchableOpacity>
+            </View>
+          )}
           scrollEnabled={false}
           ListEmptyComponent={
-            <Typography
-              variant="body"
-              style={{ textAlign: "center", marginTop: 20 }}
-            >
-              Belum ada rekomendasi yang dibuat.
-            </Typography>
+            <View style={styles.emptyContainer}>
+              <Typography variant="body" style={styles.emptyText}>
+                Belum ada data analisis. Silakan klik tombol di atas untuk
+                memulai.
+              </Typography>
+            </View>
           }
         />
       )}
@@ -97,11 +174,93 @@ export default function AIRecommendationScreen() {
 }
 
 const styles = StyleSheet.create({
-  generateBtn: {
-    backgroundColor: "#5856D6",
-    justifyContent: "center",
-    paddingVertical: 16,
-    borderWidth: 0,
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
   },
-  btnText: { color: "#FFF", fontWeight: "700", marginLeft: 8 },
+  subtitle: {
+    color: "#8E8E93",
+    marginTop: 4,
+  },
+  heroCard: {
+    backgroundColor: "#5856D6",
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 0,
+    elevation: 4,
+    shadowColor: "#5856D6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    marginBottom: 24,
+  },
+  heroContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  heroTextContainer: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  heroTitle: {
+    color: "#FFF",
+    fontWeight: "800",
+  },
+  heroSubtitle: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 13,
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    marginLeft: 8,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  itemWrapper: {
+    marginBottom: 12,
+    position: "relative",
+  },
+  updateBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F2F2F7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  updateText: {
+    fontSize: 10,
+    color: "#5856D6",
+    fontWeight: "700",
+    marginLeft: 4,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#8E8E93",
+    lineHeight: 20,
+  },
+  rotatingIcon: {
+    // Logic untuk rotasi bisa ditambahkan dengan Animated API jika diperlukan
+  },
 });

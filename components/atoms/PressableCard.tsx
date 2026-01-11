@@ -10,18 +10,21 @@ interface PressableCardProps {
   children: React.ReactNode;
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
+  disabled?: boolean; // Tambahkan properti opsional disabled
 }
 
 export const PressableCard: React.FC<PressableCardProps> = ({
   children,
   onPress,
   style,
+  disabled, // Destruktur properti disabled
 }) => {
   return (
     <TouchableOpacity
       activeOpacity={0.7}
       style={[styles.card, style]}
       onPress={onPress}
+      disabled={disabled}
     >
       {children}
     </TouchableOpacity>
