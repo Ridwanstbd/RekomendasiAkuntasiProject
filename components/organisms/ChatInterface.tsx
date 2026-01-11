@@ -5,6 +5,7 @@ import {
   Platform,
   StyleSheet,
 } from "react-native";
+import { useHeaderHeight } from "@react-navigation/elements"; // Gunakan ini untuk akurasi tinggi header
 import { ChatMessageItem } from "../molecules/ChatMessageItem";
 import { ChatInputArea } from "../molecules/ChatInputArea";
 
@@ -20,12 +21,16 @@ interface ChatInterfaceProps {
 
 export const ChatInterface = (props: ChatInterfaceProps) => {
   const flatListRef = useRef<FlatList>(null);
+  const headerHeight = useHeaderHeight(); // Mengambil tinggi header secara dinamis
 
   return (
     <KeyboardAvoidingView
+      // behavior "padding" sangat disarankan untuk iOS
+      // Untuk Android, seringkali lebih baik "height" atau tidak diisi jika windowSoftInputMode adalah adjustResize
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
-      keyboardVerticalOffset={100}
+      // Gunakan headerHeight sebagai offset agar input tidak tertutup keyboard atau terangkat terlalu tinggi
+      keyboardVerticalOffset={headerHeight}
     >
       <FlatList
         ref={flatListRef}
@@ -45,6 +50,12 @@ export const ChatInterface = (props: ChatInterfaceProps) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  chatList: { paddingHorizontal: 16, paddingBottom: 20 },
+  container: {
+    flex: 1,
+  },
+  chatList: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    paddingTop: 10,
+  },
 });

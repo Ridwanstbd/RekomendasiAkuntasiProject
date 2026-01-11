@@ -69,6 +69,7 @@ export const ChatInputArea = ({
 const styles = StyleSheet.create({
   footer: {
     padding: 12,
+    paddingBottom: 45,
     backgroundColor: "#FFF",
     borderTopWidth: 1,
     borderTopColor: "#E5E5EA",
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   textInput: {
     flex: 1,
-    backgroundColor: "#F2F2F7",
+    backgroundColor: "#d9d8ee",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,

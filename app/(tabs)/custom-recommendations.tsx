@@ -97,7 +97,8 @@ export default function CustomAIRecommendationScreen() {
   return (
     <MainLayoutTemplate
       onRefresh={fetchHistory}
-      style={{ paddingHorizontal: 0 }}
+      isScrollable={false}
+      style={{ padding: 0 }}
     >
       <ChatInterface
         messages={messages}

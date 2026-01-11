@@ -128,7 +128,7 @@ export const SalesForm: React.FC = () => {
           Pengaturan Akun
         </Typography>
         <AccountSelector
-          label="Pilih Kas/Bank"
+          label="Pilih Persediaan Barang"
           type="ASSET"
           selectedId={cashAccountId}
           onSelect={setCashAccountId}
