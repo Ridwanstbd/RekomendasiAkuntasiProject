@@ -60,7 +60,6 @@ export default function AIRecommendationScreen() {
       await api.post("/api/recommendations/monthly", {
         year: targetYear,
         month: targetMonth,
-        force: true,
       });
 
       Alert.alert(
@@ -92,7 +91,6 @@ export default function AIRecommendationScreen() {
             Analisis cerdas untuk performa bisnis Anda
           </Typography>
         </View>
-        <LayoutDashboard size={28} color="#5856D6" />
       </View>
 
       {/* Main Action Card */}
