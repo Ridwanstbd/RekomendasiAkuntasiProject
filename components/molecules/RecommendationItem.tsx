@@ -4,6 +4,7 @@ import { Typography } from "../atoms/Typography";
 import { Card } from "../atoms/Card";
 import { Badge } from "../atoms/Badge";
 import { AIRecommendation } from "@/types/accounting";
+import { renderFormattedContent } from "../../utils/textFormatter";
 
 interface Props {
   item: AIRecommendation;
@@ -30,24 +31,27 @@ export const RecommendationItem: React.FC<Props> = ({ item }) => {
           label={item.recommendationType}
           color={getColor(item.recommendationType)}
         />
-        <Typography variant="body" style={styles.date}>
+        <Typography variant="caption" style={styles.date}>
           {item.month}/{item.year}
         </Typography>
       </View>
-      <Typography variant="body" style={styles.text}>
-        {item.recommendationText}
-      </Typography>
+      <View>{renderFormattedContent(item.recommendationText)}</View>
     </Card>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { marginBottom: 16, padding: 16 },
+  container: {
+    marginBottom: 16,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#E5E5EA",
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12,
+    alignItems: "center",
+    marginBottom: 16,
   },
-  date: { fontSize: 12, color: "#8E8E93" },
-  text: { lineHeight: 22, color: "#1C1C1E" },
+  date: { color: "#8E8E93" },
 });

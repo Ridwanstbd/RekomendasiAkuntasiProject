@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { Card } from "../atoms/Card";
 import { Typography } from "../atoms/Typography";
 import { User, Bot } from "lucide-react-native";
+import { renderFormattedContent } from "../../utils/textFormatter"; // Sesuaikan path
 
 interface ChatMessageItemProps {
   text: string;
@@ -29,12 +30,15 @@ export const ChatMessageItem = ({ text, sender }: ChatMessageItemProps) => (
         sender === "user" ? styles.userBubble : styles.aiBubble,
       ]}
     >
-      <Typography
-        variant="body"
-        style={sender === "user" ? styles.userText : styles.aiText}
-      >
-        {text}
-      </Typography>
+      {/* Ganti <Typography> pembungkus dengan View karena 
+        renderFormattedContent mengembalikan komponen View/Typography sendiri 
+      */}
+      <View>
+        {renderFormattedContent(
+          text,
+          sender === "user" ? styles.userText : styles.aiText
+        )}
+      </View>
     </Card>
   </View>
 );
