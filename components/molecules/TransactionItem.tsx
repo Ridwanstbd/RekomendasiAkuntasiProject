@@ -1,15 +1,18 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Journal } from "@/types/accounting";
-import { Card } from "../atoms/Card";
 import { Typography } from "../atoms/Typography";
 import { Badge } from "../atoms/Badge";
+import { PressableCard } from "../atoms/PressableCard"; // Import PressableCard
+import { useRouter } from "expo-router";
 
 interface TransactionItemProps {
   item: Journal;
 }
 
 export const TransactionItem: React.FC<TransactionItemProps> = ({ item }) => {
+  const router = useRouter();
+
   const getCategoryDetails = (type: string) => {
     switch (type) {
       case "SALES":
@@ -26,7 +29,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ item }) => {
   const { label, color } = getCategoryDetails(item.type);
 
   return (
-    <Card style={styles.container}>
+    <PressableCard
+      style={styles.container}
+      onPress={() => router.push(`/(tabs)/transactions/${item.id}`)} // Navigasi ke detail
+    >
       <View style={styles.left}>
         <Typography variant="body" style={styles.ref}>
           {item.reference}
@@ -58,7 +64,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({ item }) => {
           {item.status}
         </Typography>
       </View>
-    </Card>
+    </PressableCard>
   );
 };
 
@@ -67,6 +73,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 12,
+    marginBottom: 8,
   },
   left: { flex: 1 },
   right: { alignItems: "flex-end", justifyContent: "center" },

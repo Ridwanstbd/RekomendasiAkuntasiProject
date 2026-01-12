@@ -5,7 +5,6 @@ import {
   FlatList,
   Alert,
   RefreshControl,
-  TouchableOpacity,
 } from "react-native";
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
 import { Typography } from "@/components/atoms/Typography";
@@ -13,12 +12,7 @@ import { PressableCard } from "@/components/atoms/PressableCard";
 import { Loader } from "@/components/atoms/Loader";
 import { RecommendationItem } from "@/components/molecules/RecommendationItem";
 import { AIRecommendation } from "@/types/accounting";
-import {
-  Sparkles,
-  RefreshCcw,
-  History,
-  LayoutDashboard,
-} from "lucide-react-native";
+import { Sparkles, RefreshCcw, History } from "lucide-react-native";
 import api from "@/services/api";
 
 export default function AIRecommendationScreen() {
@@ -55,8 +49,6 @@ export default function AIRecommendationScreen() {
       const targetYear = year || now.getFullYear();
       const targetMonth = month || now.getMonth() + 1;
 
-      // Backend menggunakan POST /monthly yang melakukan upsert (create or update)
-      // sesuai logic di recommendationBusinessService.js
       await api.post("/api/recommendations/monthly", {
         year: targetYear,
         month: targetMonth,
@@ -141,19 +133,6 @@ export default function AIRecommendationScreen() {
           renderItem={({ item }) => (
             <View style={styles.itemWrapper}>
               <RecommendationItem item={item} />
-              {/* Tombol Update Per Item */}
-              <TouchableOpacity
-                style={styles.updateBadge}
-                onPress={() =>
-                  handleGenerateOrUpdate(item.year, item.month, true)
-                }
-                disabled={generating}
-              >
-                <RefreshCcw size={12} color="#5856D6" />
-                <Typography variant="body" style={styles.updateText}>
-                  Perbarui
-                </Typography>
-              </TouchableOpacity>
             </View>
           )}
           scrollEnabled={false}

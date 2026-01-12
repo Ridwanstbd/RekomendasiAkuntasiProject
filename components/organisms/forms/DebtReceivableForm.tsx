@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Alert, TouchableOpacity } from "react-native";
 import { FormField } from "../../molecules/FormField";
 import { AccountSelector } from "../../molecules/AccountSelector";
@@ -6,20 +6,67 @@ import { Button } from "../../atoms/Button";
 import { Typography } from "../../atoms/Typography";
 import api from "@/services/api";
 import { useRouter } from "expo-router";
+import { Journal } from "@/types/accounting";
 
 type TransactionMode = "DEBT" | "RECEIVABLE";
 
-export const DebtReceivableForm: React.FC = () => {
+interface DebtReceivableFormProps {
+  editId?: string;
+  initialData?: Journal;
+}
+
+export const DebtReceivableForm: React.FC<DebtReceivableFormProps> = ({
+  editId,
+  initialData,
+}) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<TransactionMode>("DEBT");
 
   // State Input
   const [personName, setPersonName] = useState("");
-  const [cashAccountId, setCashAccountId] = useState(""); // Akun Kas/Bank
-  const [targetAccountId, setTargetAccountId] = useState(""); // Akun Utang (Liability) atau Piutang (Asset)
+  const [cashAccountId, setCashAccountId] = useState("");
+  const [targetAccountId, setTargetAccountId] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    if (editId && initialData && initialData.entries) {
+      const refParts = initialData.reference.split(": ");
+      if (refParts.length > 1) {
+        const isDebt = refParts[0] === "UTANG";
+        setMode(isDebt ? "DEBT" : "RECEIVABLE");
+
+        const details = refParts[1].split(" - ");
+        setPersonName(details[0] || "");
+        setDescription(details[1] || "");
+      }
+
+      if (initialData.type === "GENERAL") {
+        const isDebt = initialData.reference.startsWith("UTANG");
+
+        if (isDebt) {
+          const cashEntry = initialData.entries.find((e) => e.debitAmount > 0);
+          const debtEntry = initialData.entries.find((e) => e.creditAmount > 0);
+          if (cashEntry) setCashAccountId(cashEntry.debitAccountId || "");
+          if (debtEntry) {
+            setTargetAccountId(debtEntry.creditAccountId || "");
+            setAmount(debtEntry.creditAmount.toString());
+          }
+        } else {
+          const receivableEntry = initialData.entries.find(
+            (e) => e.debitAmount > 0
+          );
+          const cashEntry = initialData.entries.find((e) => e.creditAmount > 0);
+          if (receivableEntry) {
+            setTargetAccountId(receivableEntry.debitAccountId || "");
+            setAmount(receivableEntry.debitAmount.toString());
+          }
+          if (cashEntry) setCashAccountId(cashEntry.creditAccountId || "");
+        }
+      }
+    }
+  }, [editId, initialData]);
 
   const handleSubmit = async () => {
     if (!personName || !cashAccountId || !targetAccountId || !amount) {
@@ -30,60 +77,61 @@ export const DebtReceivableForm: React.FC = () => {
     try {
       const totalAmount = parseFloat(amount);
       const prefix = mode === "DEBT" ? "UTANG" : "PIUTANG";
-      // Menyimpan nama orang di body reference
       const fullReference = `${prefix}: ${personName} - ${description}`;
 
       let entries = [];
-
       if (mode === "DEBT") {
-        // UTANG: Kas Bertambah (Debit), Utang Bertambah (Kredit)
         entries = [
           {
             debitAccountId: cashAccountId,
             creditAccountId: null,
-            description: `Terima dana utang dari ${personName}`,
+            description: `Kas utang ${personName}`,
             debitAmount: totalAmount,
             creditAmount: 0,
           },
           {
             debitAccountId: null,
             creditAccountId: targetAccountId,
-            description: `Kewajiban utang kepada ${personName}`,
+            description: `Kewajiban utang ${personName}`,
             debitAmount: 0,
             creditAmount: totalAmount,
           },
         ];
       } else {
-        // PIUTANG: Piutang Bertambah (Debit), Kas Berkurang (Kredit)
         entries = [
           {
             debitAccountId: targetAccountId,
             creditAccountId: null,
-            description: `Pemberian pinjaman kepada ${personName}`,
+            description: `Piutang ${personName}`,
             debitAmount: totalAmount,
             creditAmount: 0,
           },
           {
             debitAccountId: null,
             creditAccountId: cashAccountId,
-            description: `Keluar kas untuk piutang ${personName}`,
+            description: `Keluar kas piutang ${personName}`,
             debitAmount: 0,
             creditAmount: totalAmount,
           },
         ];
       }
 
-      const journalRes = await api.post("/api/journals", {
+      const payload = {
         date: new Date().toISOString(),
         type: "GENERAL",
         reference: fullReference,
         entries,
-      });
+      };
 
-      const journalId = journalRes.data.data.id;
-      await api.patch(`/api/journals/${journalId}/post`);
+      if (editId) {
+        await api.put(`/api/journals/${editId}`, payload);
+        Alert.alert("Sukses", "Transaksi utang/piutang berhasil diperbarui.");
+      } else {
+        const journalRes = await api.post("/api/journals", payload);
+        await api.patch(`/api/journals/${journalRes.data.data.id}/post`);
+        Alert.alert("Sukses", `${prefix} berhasil dicatat.`);
+      }
 
-      Alert.alert("Sukses", `${prefix} berhasil dicatat dan diposting.`);
       router.replace("/(tabs)/transactions");
     } catch (err: any) {
       Alert.alert("Gagal", err.response?.data?.message || "Terjadi kesalahan");
@@ -94,34 +142,39 @@ export const DebtReceivableForm: React.FC = () => {
 
   return (
     <View>
-      {/* Switcher Mode */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, mode === "DEBT" && styles.activeTab]}
           onPress={() => {
-            setMode("DEBT");
-            setTargetAccountId("");
+            if (!editId) {
+              setMode("DEBT");
+              setTargetAccountId("");
+            }
           }}
+          disabled={!!editId}
         >
           <Typography
             variant="body"
             style={mode === "DEBT" ? styles.activeTabText : {}}
           >
-            Utang (Saya Meminjam)
+            Utang (Pinjam)
           </Typography>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, mode === "RECEIVABLE" && styles.activeTab]}
           onPress={() => {
-            setMode("RECEIVABLE");
-            setTargetAccountId("");
+            if (!editId) {
+              setMode("RECEIVABLE");
+              setTargetAccountId("");
+            }
           }}
+          disabled={!!editId}
         >
           <Typography
             variant="body"
             style={mode === "RECEIVABLE" ? styles.activeTabText : {}}
           >
-            Piutang (Memberi Pinjaman)
+            Piutang (Pinjamkan)
           </Typography>
         </TouchableOpacity>
       </View>
@@ -154,7 +207,6 @@ export const DebtReceivableForm: React.FC = () => {
         value={amount}
         onChangeText={setAmount}
       />
-
       <FormField
         label="Keterangan Tambahan"
         placeholder="Contoh: Jangka waktu 3 bulan"
@@ -163,7 +215,13 @@ export const DebtReceivableForm: React.FC = () => {
       />
 
       <Button
-        title={loading ? "Memproses..." : "Simpan Transaksi"}
+        title={
+          loading
+            ? "Memproses..."
+            : editId
+            ? "Update Transaksi"
+            : "Simpan Transaksi"
+        }
         onPress={handleSubmit}
         isLoading={loading}
         style={{ marginTop: 20 }}

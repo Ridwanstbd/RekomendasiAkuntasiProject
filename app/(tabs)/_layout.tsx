@@ -76,6 +76,18 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
+      <Tabs.Screen
+        name="transactions/[id]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="transactions/edit"
+        options={{
+          href: null,
+        }}
+      />
 
       <Tabs.Screen
         name="create/form"

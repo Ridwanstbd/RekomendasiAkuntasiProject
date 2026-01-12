@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 import { FormField } from "../../molecules/FormField";
 import { AccountSelector } from "../../molecules/AccountSelector";
@@ -6,17 +6,39 @@ import { Button } from "../../atoms/Button";
 import { Typography } from "../../atoms/Typography";
 import api from "@/services/api";
 import { useRouter } from "expo-router";
+import { Journal } from "@/types/accounting";
 
-export const PurchaseForm: React.FC = () => {
+interface PurchaseFormProps {
+  editId?: string;
+  initialData?: Journal;
+}
+
+export const PurchaseForm: React.FC<PurchaseFormProps> = ({
+  editId,
+  initialData,
+}) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
 
-  // State
-  const [cashAccountId, setCashAccountId] = useState(""); // Akun Kas (Kredit)
-  const [inventoryAccountId, setInventoryAccountId] = useState(""); // Akun Persediaan (Debit)
+  const [cashAccountId, setCashAccountId] = useState("");
+  const [inventoryAccountId, setInventoryAccountId] = useState("");
   const [itemName, setItemName] = useState("");
   const [amount, setAmount] = useState("");
+
+  useEffect(() => {
+    if (editId && initialData && initialData.entries) {
+      const invEntry = initialData.entries.find((e) => e.debitAmount > 0);
+      const cashEntry = initialData.entries.find((e) => e.creditAmount > 0);
+
+      if (invEntry) {
+        setInventoryAccountId(invEntry.debitAccountId || "");
+        setAmount(invEntry.debitAmount.toString());
+        setItemName(initialData.reference.replace("Pembelian: ", ""));
+      }
+      if (cashEntry) setCashAccountId(cashEntry.creditAccountId || "");
+    }
+  }, [editId, initialData]);
 
   const handleSubmit = async () => {
     if (!cashAccountId || !inventoryAccountId || !itemName || !amount) {
@@ -25,10 +47,8 @@ export const PurchaseForm: React.FC = () => {
 
     setLoading(true);
     try {
-      setStatusMsg("Menyusun jurnal...");
-
       const totalAmount = parseFloat(amount);
-      const journalPayload = {
+      const payload = {
         date: new Date().toISOString(),
         type: "PURCHASE",
         reference: `Pembelian: ${itemName}`,
@@ -36,30 +56,31 @@ export const PurchaseForm: React.FC = () => {
           {
             debitAccountId: inventoryAccountId,
             creditAccountId: null,
-            description: `Pembelian stok ${itemName}`,
+            description: `Beli stok ${itemName}`,
             debitAmount: totalAmount,
             creditAmount: 0,
           },
           {
             debitAccountId: null,
             creditAccountId: cashAccountId,
-            description: `Pembayaran stok ${itemName}`,
+            description: `Bayar stok ${itemName}`,
             debitAmount: 0,
             creditAmount: totalAmount,
           },
         ],
       };
 
-      // 1. Create Journal
-      const res = await api.post("/api/journals", journalPayload);
-      const journalId = res.data.data.id;
-
-      // 2. Post Journal
-      setStatusMsg("Memposting saldo...");
-      await api.patch(`/api/journals/${journalId}/post`);
-
-      Alert.alert("Sukses", "Pembelian stok berhasil dicatat.");
-      router.replace("/(tabs)/transactions");
+      if (editId) {
+        setStatusMsg("Memperbarui pembelian...");
+        await api.put(`/api/journals/${editId}`, payload);
+        Alert.alert("Sukses", "Pembelian berhasil diperbarui.");
+      } else {
+        setStatusMsg("Menyusun jurnal...");
+        const res = await api.post("/api/journals", payload);
+        await api.patch(`/api/journals/${res.data.data.id}/post`);
+        Alert.alert("Sukses", "Pembelian berhasil dicatat.");
+      }
+      router.replace("/transactions");
     } catch (err: any) {
       Alert.alert("Gagal", err.response?.data?.message || "Terjadi kesalahan");
     } finally {
@@ -79,9 +100,7 @@ export const PurchaseForm: React.FC = () => {
         selectedId={cashAccountId}
         onSelect={setCashAccountId}
       />
-
       <View style={styles.divider} />
-
       <Typography variant="body" style={styles.sectionTitle}>
         Detail Stok
       </Typography>
@@ -91,24 +110,21 @@ export const PurchaseForm: React.FC = () => {
         selectedId={inventoryAccountId}
         onSelect={setInventoryAccountId}
       />
-
       <FormField
         label="Nama Barang"
-        placeholder="Contoh: Stok Bahan Baku"
         value={itemName}
         onChangeText={setItemName}
       />
-
       <FormField
-        label="Total Nilai Pembelian (Rp)"
-        placeholder="0"
+        label="Total Nilai (Rp)"
         type="number"
         value={amount}
         onChangeText={setAmount}
       />
-
       <Button
-        title={loading ? statusMsg : "Catat Pembelian"}
+        title={
+          loading ? statusMsg : editId ? "Update Pembelian" : "Catat Pembelian"
+        }
         onPress={handleSubmit}
         isLoading={loading}
         style={{ marginTop: 20 }}

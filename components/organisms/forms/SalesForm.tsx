@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { View, StyleSheet, Alert, ScrollView } from "react-native";
 import { Plus } from "lucide-react-native";
 import { CustomerSelector } from "../../molecules/CustomerSelector";
@@ -8,6 +8,7 @@ import { Button } from "../../atoms/Button";
 import { Typography } from "../../atoms/Typography";
 import api from "@/services/api";
 import { useRouter } from "expo-router";
+import { Journal } from "@/types/accounting";
 
 interface ItemState {
   productName: string;
@@ -15,7 +16,15 @@ interface ItemState {
   price: string;
 }
 
-export const SalesForm: React.FC = () => {
+interface SalesFormProps {
+  editId?: string;
+  initialData?: Journal;
+}
+
+export const SalesForm: React.FC<SalesFormProps> = ({
+  editId,
+  initialData,
+}) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
@@ -26,6 +35,24 @@ export const SalesForm: React.FC = () => {
   const [items, setItems] = useState<ItemState[]>([
     { productName: "", quantity: "1", price: "" },
   ]);
+
+  useEffect(() => {
+    if (editId && initialData) {
+      const cashEntry = initialData.entries?.find((e) => e.debitAmount > 0);
+      const salesEntry = initialData.entries?.find((e) => e.creditAmount > 0);
+
+      if (cashEntry) setCashAccountId(cashEntry.debitAccountId || "");
+      if (salesEntry) setSalesAccountId(salesEntry.creditAccountId || "");
+
+      setItems([
+        {
+          productName: initialData.reference,
+          quantity: "1",
+          price: initialData.totalAmount.toString(),
+        },
+      ]);
+    }
+  }, [editId, initialData]);
 
   const grandTotal = useMemo(() => {
     return items.reduce((sum, item) => {
@@ -47,7 +74,6 @@ export const SalesForm: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    // Validasi UUID (Pastikan tidak string kosong)
     if (!customerId || !cashAccountId || !salesAccountId) {
       return Alert.alert(
         "Validation Error",
@@ -55,64 +81,61 @@ export const SalesForm: React.FC = () => {
       );
     }
 
-    // Transformasi data sesuai createSaleSchema
     const processedItems = items.map((item) => ({
       productName: item.productName.trim(),
-      quantity: Number(item.quantity), // Harus Number
-      price: Number(item.price), // Harus Number
+      quantity: Number(item.quantity),
+      price: Number(item.price),
     }));
-
-    // Validasi Item sebelum kirim (mencegah quantity <= 0)
-    if (
-      processedItems.some(
-        (i) => i.productName === "" || i.quantity <= 0 || i.price < 0
-      )
-    ) {
-      return Alert.alert(
-        "Validation Error",
-        "Pastikan nama produk terisi, qty > 0, dan harga >= 0."
-      );
-    }
 
     setLoading(true);
     try {
-      setStatusMsg("Mendaftarkan penjualan...");
-
-      // Request 1: Create Sale
-      const saleRes = await api.post("/api/sales", {
-        customerId,
-        date: new Date().toISOString(),
-        tax: 0, // Sesuai schema: default 0
-        items: processedItems,
-      });
-
-      const saleId = saleRes.data.data.id;
-
-      // Request 2: Create Sales Journal
-      setStatusMsg("Menyusun jurnal...");
-      const journalRes = await api.post("/api/journals/sales", {
-        saleId,
-        cashAccountId,
-        salesAccountId,
-        taxAccountId: null, // Diberikan null agar valid UUID/null
-      });
-
-      // Request 3: Post Journal
-      setStatusMsg("Finalisasi saldo...");
-      await api.patch(`/api/journals/${journalRes.data.data.id}/post`);
-
-      setStatusMsg("Memperbarui status transaksi...");
-      await api.patch(`/api/sales/${saleId}/status`, {
-        status: "COMPLETED",
-      });
-
-      Alert.alert("Sukses", "Transaksi berhasil disimpan dan diposting.");
+      if (editId) {
+        setStatusMsg("Memperbarui transaksi...");
+        await api.put(`/api/journals/${editId}`, {
+          date: new Date().toISOString(),
+          type: "SALES",
+          reference: initialData?.reference,
+          entries: [
+            {
+              debitAccountId: cashAccountId,
+              creditAccountId: null,
+              description: `Update: ${initialData?.reference}`,
+              debitAmount: grandTotal,
+              creditAmount: 0,
+            },
+            {
+              debitAccountId: null,
+              creditAccountId: salesAccountId,
+              description: `Update: Penjualan`,
+              debitAmount: 0,
+              creditAmount: grandTotal,
+            },
+          ],
+        });
+        Alert.alert("Sukses", "Transaksi berhasil diperbarui.");
+      } else {
+        // Logika CREATE baru seperti sebelumnya
+        setStatusMsg("Mendaftarkan penjualan...");
+        const saleRes = await api.post("/api/sales", {
+          customerId,
+          date: new Date().toISOString(),
+          tax: 0,
+          items: processedItems,
+        });
+        const saleId = saleRes.data.data.id;
+        const journalRes = await api.post("/api/journals/sales", {
+          saleId,
+          cashAccountId,
+          salesAccountId,
+          taxAccountId: null,
+        });
+        await api.patch(`/api/journals/${journalRes.data.data.id}/post`);
+        await api.patch(`/api/sales/${saleId}/status`, { status: "COMPLETED" });
+        Alert.alert("Sukses", "Transaksi berhasil disimpan.");
+      }
       router.replace("/transactions");
     } catch (err: any) {
-      // Menampilkan pesan error spesifik dari Joi Backend
-      const serverMessage = err.response?.data?.message || "Terjadi kesalahan";
-      console.error("Detail Error:", err.response?.data);
-      Alert.alert("Gagal Simpan", serverMessage);
+      Alert.alert("Gagal", err.response?.data?.message || "Terjadi kesalahan");
     } finally {
       setLoading(false);
       setStatusMsg("");
@@ -122,13 +145,12 @@ export const SalesForm: React.FC = () => {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <CustomerSelector selectedId={customerId} onSelect={setCustomerId} />
-
       <View style={styles.section}>
         <Typography variant="body" style={styles.sectionTitle}>
           Pengaturan Akun
         </Typography>
         <AccountSelector
-          label="Pilih Persediaan Barang"
+          label="Pilih Akun Kas/Bank"
           type="ASSET"
           selectedId={cashAccountId}
           onSelect={setCashAccountId}
@@ -140,7 +162,6 @@ export const SalesForm: React.FC = () => {
           onSelect={setSalesAccountId}
         />
       </View>
-
       <View style={styles.section}>
         <View style={styles.rowHeader}>
           <Typography variant="body" style={styles.sectionTitle}>
@@ -154,19 +175,15 @@ export const SalesForm: React.FC = () => {
             style={styles.btnAdd}
           />
         </View>
-
         {items.map((item, index) => (
           <SaleItemRow
             key={index}
             index={index}
-            productName={item.productName}
-            quantity={item.quantity}
-            price={item.price}
+            {...item}
             onUpdate={updateItem}
             onRemove={removeItem}
           />
         ))}
-
         <View style={styles.totalContainer}>
           <Typography variant="body">Total Nominal</Typography>
           <Typography variant="h1" style={styles.totalText}>
@@ -178,9 +195,14 @@ export const SalesForm: React.FC = () => {
           </Typography>
         </View>
       </View>
-
       <Button
-        title={loading ? statusMsg : "Simpan & Posting"}
+        title={
+          loading
+            ? statusMsg
+            : editId
+            ? "Perbarui Transaksi"
+            : "Simpan & Posting"
+        }
         onPress={handleSubmit}
         isLoading={loading}
         style={styles.btnSubmit}

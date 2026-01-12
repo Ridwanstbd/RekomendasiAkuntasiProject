@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 import { FormField } from "../../molecules/FormField";
 import { AccountSelector } from "../../molecules/AccountSelector";
@@ -6,17 +6,39 @@ import { Button } from "../../atoms/Button";
 import { Typography } from "../../atoms/Typography";
 import api from "@/services/api";
 import { useRouter } from "expo-router";
+import { Journal } from "@/types/accounting";
 
-export const ExpenseForm: React.FC = () => {
+interface ExpenseFormProps {
+  editId?: string;
+  initialData?: Journal;
+}
+
+export const ExpenseForm: React.FC<ExpenseFormProps> = ({
+  editId,
+  initialData,
+}) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
 
-  // State
-  const [cashAccountId, setCashAccountId] = useState(""); // Kredit: Kas/Bank (ASSET)
-  const [expenseAccountId, setExpenseAccountId] = useState(""); // Debit: Biaya (EXPENSE)
+  const [cashAccountId, setCashAccountId] = useState("");
+  const [expenseAccountId, setExpenseAccountId] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+
+  useEffect(() => {
+    if (editId && initialData && initialData.entries) {
+      const expenseEntry = initialData.entries.find((e) => e.debitAmount > 0);
+      const cashEntry = initialData.entries.find((e) => e.creditAmount > 0);
+
+      if (expenseEntry) {
+        setExpenseAccountId(expenseEntry.debitAccountId || "");
+        setAmount(expenseEntry.debitAmount.toString());
+        setDescription(initialData.reference);
+      }
+      if (cashEntry) setCashAccountId(cashEntry.creditAccountId || "");
+    }
+  }, [editId, initialData]);
 
   const handleSubmit = async () => {
     if (!cashAccountId || !expenseAccountId || !amount || !description) {
@@ -25,13 +47,11 @@ export const ExpenseForm: React.FC = () => {
 
     setLoading(true);
     try {
-      setStatusMsg("Mencatat biaya...");
-
       const totalAmount = parseFloat(amount);
-      const journalPayload = {
+      const payload = {
         date: new Date().toISOString(),
         type: "EXPENSE",
-        reference: `${description} (${new Date().getTime()})`,
+        reference: description,
         entries: [
           {
             debitAccountId: expenseAccountId,
@@ -50,16 +70,17 @@ export const ExpenseForm: React.FC = () => {
         ],
       };
 
-      // 1. Simpan Jurnal
-      const res = await api.post("/api/journals", journalPayload);
-      const journalId = res.data.data.id;
-
-      // 2. Posting Jurnal agar saldo akun terupdate
-      setStatusMsg("Memperbarui saldo...");
-      await api.patch(`/api/journals/${journalId}/post`);
-
-      Alert.alert("Sukses", "Biaya berhasil dicatat dan diposting.");
-      router.replace("/(tabs)/transactions");
+      if (editId) {
+        setStatusMsg("Memperbarui biaya...");
+        await api.put(`/api/journals/${editId}`, payload);
+        Alert.alert("Sukses", "Biaya berhasil diperbarui.");
+      } else {
+        setStatusMsg("Mencatat biaya...");
+        const res = await api.post("/api/journals", payload);
+        await api.patch(`/api/journals/${res.data.data.id}/post`);
+        Alert.alert("Sukses", "Biaya berhasil dicatat.");
+      }
+      router.replace("/transactions");
     } catch (err: any) {
       Alert.alert("Gagal", err.response?.data?.message || "Terjadi kesalahan");
     } finally {
@@ -79,9 +100,7 @@ export const ExpenseForm: React.FC = () => {
         selectedId={cashAccountId}
         onSelect={setCashAccountId}
       />
-
       <View style={styles.divider} />
-
       <Typography variant="body" style={styles.sectionTitle}>
         Kategori Biaya
       </Typography>
@@ -91,27 +110,21 @@ export const ExpenseForm: React.FC = () => {
         selectedId={expenseAccountId}
         onSelect={setExpenseAccountId}
       />
-
       <FormField
         label="Keterangan Biaya"
-        placeholder="Contoh: Bayar Listrik Toko"
         value={description}
         onChangeText={setDescription}
       />
-
       <FormField
         label="Jumlah (Rp)"
-        placeholder="0"
         type="number"
         value={amount}
         onChangeText={setAmount}
       />
-
       <Button
-        title={loading ? statusMsg : "Bayar Sekarang"}
+        title={loading ? statusMsg : editId ? "Update Biaya" : "Bayar Sekarang"}
         onPress={handleSubmit}
         isLoading={loading}
-        disabled={loading}
         style={{ marginTop: 20 }}
       />
     </View>
