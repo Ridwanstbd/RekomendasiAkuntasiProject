@@ -4,7 +4,7 @@ import { Alert } from "react-native";
 import { router } from "expo-router";
 
 const api = axios.create({
-  baseURL: "http://203.194.113.228",
+  baseURL: "https://finance.ridwansetio.my.id",
   // baseURL: "http://192.168.240.1:3000",
   timeout: 10000,
 });
