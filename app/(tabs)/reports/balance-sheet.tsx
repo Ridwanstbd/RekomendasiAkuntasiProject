@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react"; // Tambahkan useCallback
 import { View, StyleSheet, Alert } from "react-native";
+import { useFocusEffect } from "@react-navigation/native"; // Tambahkan import ini
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
 import { Typography } from "@/components/atoms/Typography";
 import { Loader } from "@/components/atoms/Loader";
@@ -25,9 +26,15 @@ export default function BalanceSheetScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchBalanceSheet();
-  }, []);
+  // Menggantikan useEffect dengan useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      fetchBalanceSheet();
+
+      // Optional: return cleanup function jika diperlukan
+      // return () => { console.log('Screen unfocused') };
+    }, [])
+  );
 
   if (loading && !data) return <Loader />;
 

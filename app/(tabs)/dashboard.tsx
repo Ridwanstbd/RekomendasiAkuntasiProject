@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react"; // Hapus useEffect
 import { PressableCard } from "@/components/atoms/PressableCard";
-import { Sparkles, ArrowRight, Send } from "lucide-react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { Sparkles, ArrowRight, Send, Building2 } from "lucide-react-native";
+import { useRouter, useFocusEffect } from "expo-router"; // useFocusEffect sudah di-import dari sini
 import * as SecureStore from "expo-secure-store";
-import { Building2 } from "lucide-react-native";
 import api from "@/services/api";
 import { Typography } from "@/components/atoms/Typography";
 import { Header } from "@/components/organisms/Header";
@@ -27,6 +26,7 @@ export default function DashboardScreen() {
   const [userName, setUserName] = useState<string>("User");
   const [totalAsset, setTotalAsset] = useState<number>(0);
 
+  // Fungsi untuk mengambil data ringkasan saldo
   const fetchSummaryData = async (businessId: string) => {
     try {
       const response = await api.get(`/api/accounts?type=ASSET`);
@@ -43,22 +43,12 @@ export default function DashboardScreen() {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      if (selectedId) {
-        fetchSummaryData(selectedId);
-      }
-    }, [selectedId])
-  );
-
-  useEffect(() => {
-    initDashboard();
-  }, []);
-
-  const initDashboard = async () => {
+  // Fungsi utama untuk inisialisasi dashboard
+  const initDashboard = async (isSilent = false) => {
     try {
-      setLoading(true);
+      if (!isSilent) setLoading(true);
 
+      // 1. Ambil Profil User
       try {
         const userRes = await api.get("/api/auth/me");
         if (userRes.data.success) {
@@ -68,17 +58,22 @@ export default function DashboardScreen() {
         console.error("Gagal mengambil profil:", userErr);
       }
 
+      // 2. Ambil Daftar Bisnis
       const response = await api.get("/api/business/my-businesses");
       const data = response.data.data;
 
       if (data && data.length > 0) {
         setBusinesses(data);
+
+        // Cek ID yang tersimpan atau gunakan yang pertama
         const savedId = await SecureStore.getItemAsync("businessId");
         const initialId =
           data.find((b: Business) => b.id === savedId)?.id || data[0].id;
 
         setSelectedId(initialId);
         await SecureStore.setItemAsync("businessId", initialId);
+
+        // 3. Ambil Summary Data setelah businessId didapat
         await fetchSummaryData(initialId);
       } else {
         router.replace("/company-setup");
@@ -90,6 +85,21 @@ export default function DashboardScreen() {
     }
   };
 
+  /**
+   * PENGGANTI useEffect:
+   * useFocusEffect akan berjalan setiap kali layar di-mount
+   * ATAU ketika user kembali ke layar ini dari navigasi lain.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      initDashboard();
+
+      // Jika ada proses yang perlu dihentikan saat layar ditinggalkan,
+      // tambahkan di return function ini.
+      return () => {};
+    }, [])
+  );
+
   const handleSwitchBusiness = async (id: string) => {
     setSelectedId(id);
     await SecureStore.setItemAsync("businessId", id);
@@ -98,9 +108,8 @@ export default function DashboardScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    if (selectedId) {
-      await fetchSummaryData(selectedId);
-    }
+    // Jalankan init secara silent (tanpa loader utama) saat pull-to-refresh
+    await initDashboard(true);
     setRefreshing(false);
   };
 
@@ -109,7 +118,7 @@ export default function DashboardScreen() {
   }
 
   return (
-    <MainLayoutTemplate onRefresh={onRefresh} isRefreshing={refreshing}>
+    <MainLayoutTemplate onRefresh={onRefresh} refreshing={refreshing}>
       <Header name={userName} />
       <SelectField
         label="Bisnis Aktif"
@@ -179,11 +188,13 @@ export default function DashboardScreen() {
     </MainLayoutTemplate>
   );
 }
+
 const styles = StyleSheet.create({
   aiCard: {
     borderWidth: 1,
     borderColor: "#E5E5EA",
     padding: 16,
+    marginBottom: 12, // Tambahan agar antar card tidak nempel
   },
   aiIconWrapper: {
     width: 44,

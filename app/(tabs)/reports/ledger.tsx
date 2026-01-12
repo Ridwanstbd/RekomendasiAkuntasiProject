@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { View, StyleSheet, FlatList } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
 import { Typography } from "@/components/atoms/Typography";
 import { Card } from "@/components/atoms/Card";
@@ -17,7 +18,6 @@ export default function GeneralLedgerScreen() {
   const fetchLedger = async (accountId: string) => {
     try {
       setLoading(true);
-      // Konstruksi URL: Jika accountId kosong, panggil tanpa parameter accountId
       const url = accountId
         ? `/api/reports/ledger?accountId=${accountId}`
         : "/api/reports/ledger";
@@ -31,11 +31,11 @@ export default function GeneralLedgerScreen() {
     }
   };
 
-  // Panggil fetchLedger saat komponen pertama kali dimuat (untuk ambil semua jika diizinkan backend)
-  // Atau hanya panggil saat selectedAccountId berubah
-  useEffect(() => {
-    fetchLedger(selectedAccountId);
-  }, [selectedAccountId]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchLedger(selectedAccountId);
+    }, [selectedAccountId])
+  );
 
   const totalDebit = entries.reduce(
     (sum, e) => sum + Number(e.debitAmount || 0),

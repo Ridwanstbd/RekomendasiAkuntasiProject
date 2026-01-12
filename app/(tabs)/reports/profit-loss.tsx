@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import React, { useState, useCallback } from "react";
+import { View, StyleSheet } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { MainLayoutTemplate } from "@/components/templates/MainLayoutTemplate";
 import { Typography } from "@/components/atoms/Typography";
 import { Card } from "@/components/atoms/Card";
@@ -35,15 +36,23 @@ export default function ProfitLossScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchProfitLoss();
-  }, [filters]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfitLoss();
+    }, [filters])
+  );
 
   if (loading && !data) return <Loader />;
+
+  // Logika penentuan status (Laba/Rugi)
+  const isProfit = (data?.netProfit || 0) >= 0;
+  const statusLabel = isProfit ? "LABA BERSIH" : "RUGI BERSIH";
+  const statusColor = isProfit ? "#34C759" : "#FF3B30";
 
   return (
     <MainLayoutTemplate onRefresh={fetchProfitLoss}>
       <Typography variant="h1">Laba Rugi</Typography>
+
       <DateRangePicker
         startDate={filters.startDate}
         endDate={filters.endDate}
@@ -88,18 +97,10 @@ export default function ProfitLossScreen() {
         />
       </Card>
 
-      {/* RINGKASAN AKHIR */}
-      <Card
-        style={[
-          styles.netProfitCard,
-          {
-            backgroundColor:
-              (data?.netProfit || 0) >= 0 ? "#34C759" : "#FF3B30",
-          },
-        ]}
-      >
+      {/* RINGKASAN AKHIR DENGAN INDIKATOR WARNA */}
+      <Card style={[styles.netProfitCard, { backgroundColor: statusColor }]}>
         <Typography variant="body" style={styles.netProfitLabel}>
-          Laba (Rugi) Bersih
+          {statusLabel}
         </Typography>
         <Typography variant="h1" style={styles.netProfitAmount}>
           {new Intl.NumberFormat("id-ID", {
@@ -114,7 +115,6 @@ export default function ProfitLossScreen() {
 }
 
 const styles = StyleSheet.create({
-  dateRange: { color: "#8E8E93", marginBottom: 20 },
   sectionTitle: {
     fontSize: 16,
     marginTop: 16,
@@ -130,6 +130,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 40,
   },
-  netProfitLabel: { color: "rgba(255,255,255,0.8)", fontWeight: "600" },
+  netProfitLabel: {
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: "bold",
+    letterSpacing: 1.2,
+  },
   netProfitAmount: { color: "#FFF", fontSize: 28, marginTop: 4 },
 });
